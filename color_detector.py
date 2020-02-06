@@ -19,7 +19,7 @@ class color_detector():
         rospy.init_node("color_detector")
         rospy.Subscriber('blobs', Blobs, self.blob_callback)
         rospy.Subscriber('point_cloud', PointCloud2, self.set_cmd_vel)
-        self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist)
+        self.cmd_vel_pub = rospy.Publisher('cmd_vel_mux/input/navi', Twist, queue_size=10)
         
         # Set the shutdown function (stop the robot)
         rospy.on_shutdown(self.shutdown)
@@ -34,21 +34,25 @@ class color_detector():
             if blob.red == 255 and blob.green == 0 and blob.blue == 0:
                 num_blobs += 1
         if num_blobs > self.num_blobs_threshold and not self.stop:
+            rospy.loginfo("Color detected.")
             self.move_forward(0.1)
         else:
+            rospy.loginfo("Color not detected.")
             self.look_around(0.1)
     
     def move_forward(self, linear_speed):
         move_cmd = Twist()
         move_cmd.linear.x = linear_speed
         # Publish the movement command
-        self.cmd_vel_pub.publish(move_cmd)
+        while not rospy.is_shutdown():
+            self.cmd_vel_pub.publish(move_cmd)
         
     def look_around(self, angular_speed):
         move_cmd = Twist()
         move_cmd.angular.z = angular_speed
         # Publish the movement command
-        self.cmd_vel_pub.publish(move_cmd)
+        while not rospy.is_shutdown():
+            self.cmd_vel_pub.publish(move_cmd)
         
     def shutdown(self):
         rospy.loginfo("Stopping the robot...")

@@ -17,16 +17,21 @@ import point_cloud2
 class color_detector():
     def __init__(self):
         rospy.init_node("color_detector")
-        rospy.Subscriber('blobs', Blobs, self.blob_callback)
-        rospy.Subscriber('point_cloud', PointCloud2, self.set_cmd_vel)
+        rospy.Subscriber('/blobs', Blobs, self.blob_callback)
+        rospy.Subscriber('/camera/depth/points', PointCloud2, self.set_cmd_vel)
         self.cmd_vel_pub = rospy.Publisher('cmd_vel_mux/input/navi', Twist, queue_size=10)
         
         # Set the shutdown function (stop the robot)
         rospy.on_shutdown(self.shutdown)
         self.stop = False
+        self.move_cmd = Twist()
         
         self.num_blobs_threshold = 300
         self.point_cloud_threshold = 4000
+        self.goal_z = 0.6
+        
+        if self.stop = True:
+            self.avoid_obstacle()
         
     def blob_callback(self, blobs):
         num_blobs = 0
@@ -38,21 +43,17 @@ class color_detector():
             self.move_forward(0.1)
         else:
             rospy.loginfo("Color not detected.")
-            self.look_around(0.1)
+            self.look_around(0.3)
     
     def move_forward(self, linear_speed):
-        move_cmd = Twist()
-        move_cmd.linear.x = linear_speed
+        self.move_cmd.linear.x = linear_speed
         # Publish the movement command
-        while not rospy.is_shutdown():
-            self.cmd_vel_pub.publish(move_cmd)
+        self.cmd_vel_pub.publish(self.move_cmd)
         
     def look_around(self, angular_speed):
-        move_cmd = Twist()
-        move_cmd.angular.z = angular_speed
+        self.move_cmd.angular.z = angular_speed
         # Publish the movement command
-        while not rospy.is_shutdown():
-            self.cmd_vel_pub.publish(move_cmd)
+        self.cmd_vel_pub.publish(self.move_cmd)
         
     def shutdown(self):
         rospy.loginfo("Stopping the robot...")
@@ -69,10 +70,11 @@ class color_detector():
             pt_y = point[1]
             pt_z = point[2]
             
-            x += pt_x
-            y += pt_y
-            z += pt_z
-            n += 1
+            if pt_z < self.goal_z:
+                x += pt_x
+                y += pt_y
+                z = min(pt_z, z)
+                n += 1
                 
         # Stop the robot by default
         move_cmd = Twist()
@@ -87,8 +89,13 @@ class color_detector():
                         
         # Publish the movement command
         self.cmd_vel_pub.publish(move_cmd)
-        
-        
+        #allow up to 2 seconds for the action server to come up
+        self.move_base.wait_for_server(rospy.Duration(2))
+    
+    def avoid_obstacle():
+        self.move_cmd.linear.x = 0.2
+        self.move_cmd.angular.z = 0.2
+        self.cmd_vel_pub.publish(self.move_cmd)
         
 if __name__ == '__main__':
     try:

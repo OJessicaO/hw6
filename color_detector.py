@@ -27,7 +27,7 @@ class color_detector():
         self.move_cmd = Twist()
         
         self.num_blobs_threshold = 300
-        self.point_cloud_threshold = 4000
+        self.point_cloud_threshold = 2000
         self.goal_z = 0.6
         
         if self.stop = True:
@@ -36,7 +36,7 @@ class color_detector():
     def blob_callback(self, blobs):
         num_blobs = 0
         for blob in blobs.blobs:
-            if blob.red == 255 and blob.green == 0 and blob.blue == 0:
+            if blob.red == 140 and blob.green == 136 and blob.blue == 33:
                 num_blobs += 1
         if num_blobs > self.num_blobs_threshold and not self.stop:
             rospy.loginfo("Color detected.")
@@ -61,6 +61,7 @@ class color_detector():
         rospy.sleep(1)
         
     def set_cmd_vel(self, msg):
+        rospy.loginfo("Calculating the points...")
         # Initialize the centroid coordinates point count
         x = y = z = n = 0
         
